@@ -1,0 +1,285 @@
+.btn {
+  border: 1px solid var(--bg-muted);
+  background: var(--bg-panel);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 0.45rem 0.85rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--board-dark);
+  border-color: var(--board-dark);
+  color: #fff;
+}
+
+.btn-ghost {
+  background: transparent;
+}
+
+.btn-danger-text {
+  color: var(--danger);
+  background: transparent;
+  border: none;
+  margin-top: 0.5rem;
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.92rem;
+}
+
+.field input[type='text'],
+.field select {
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--bg-muted);
+  background: #fff;
+}
+
+.field.checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+
+.mode-toggle {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+
+.btn-grid #move-up {
+  grid-column: 2;
+}
+
+.btn-grid #move-left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.btn-grid #move-down {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.btn-grid #move-right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.stats-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stats-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed var(--bg-muted);
+}
+
+.stats-list li span {
+  color: var(--text-muted);
+}
+
+.status-won {
+  color: var(--safe);
+}
+
+.status-lost {
+  color: var(--danger);
+}
+
+.status-stuck {
+  color: var(--warning);
+}
+
+.percept-grid {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.percept-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  background: var(--bg-panel);
+}
+
+.percept-item.active {
+  border-left: 4px solid var(--warning);
+}
+
+.percept-item.inactive {
+  opacity: 0.75;
+}
+
+.percept-meta {
+  margin: 0.75rem 0 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.percept-meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.percept-meta dt {
+  color: var(--text-muted);
+}
+
+.percept-meta dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.reasoning-log {
+  max-height: 280px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid var(--bg-muted);
+  border-radius: 10px;
+  padding: 0.5rem;
+  font-size: 0.86rem;
+}
+
+.log-entry {
+  padding: 0.35rem 0.45rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.log-safe {
+  color: var(--safe);
+}
+
+.log-warning {
+  color: var(--warning);
+}
+
+.log-danger {
+  color: var(--danger);
+}
+
+.log-gold {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.history-list li {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 0.35rem 0.6rem;
+  font-size: 0.86rem;
+  padding: 0.45rem;
+  background: var(--bg-panel);
+  border-radius: 8px;
+}
+
+.hist-reason {
+  grid-column: 1 / -1;
+  color: var(--text-muted);
+}
+
+.outcome-win {
+  color: var(--safe);
+  font-weight: 600;
+}
+
+.outcome-loss {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.outcome-stuck {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.empty-state {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  font-size: 0.78rem;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.swatch.safe {
+  background: #b8e6c8;
+}
+
+.swatch.visited {
+  background: #dbeafe;
+}
+
+.swatch.possible {
+  background: #ffe6b3;
+}
+
+.swatch.confirmed {
+  background: #ffb3b3;
+}
+
+.swatch.unknown {
+  background: #d5dbe3;
+}
