@@ -112,25 +112,6 @@ npm test
 
 ---
 
-## GitHub Pages (after you review)
-
-This repo is ready to publish. Do **not** enable Pages until you have reviewed the site.
-
-1. Push the repository to GitHub (do not commit `node_modules/`).
-2. **Settings → Pages → Build and deployment**
-3. **Source:** Deploy from a branch
-4. **Branch:** `main` (or `master`)
-5. **Folder:** `/docs`
-6. Save. The site will be at:
-
-```text
-https://<YOUR_GITHUB_USERNAME>.github.io/<YOUR_REPOSITORY_NAME>/
-```
-
-No GitHub Actions workflow is included on purpose. All links in `docs/` are relative (`css/…`, `js/…`, `algorithm/…`). `docs/.nojekyll` tells Pages not to run Jekyll on the folder.
-
----
-
 ## Scoring
 
 | Event | Points |
@@ -149,9 +130,3 @@ No GitHub Actions workflow is included on purpose. All links in `docs/` are rela
 - Risk moves at high pit density can die. That is Defeat.
 - History stores up to **50** games in `localStorage`.
 - Very high pit density may fall back to a guaranteed-path generator (noted under Configuration).
-
----
-
-## License
-
-MIT. See `LICENSE`.
