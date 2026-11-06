@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Wumpus World">
-  <rect width="32" height="32" rx="6" fill="#355872"/>
-  <rect x="5" y="5" width="9" height="9" rx="2" fill="#9cd5ff"/>
-  <rect x="18" y="5" width="9" height="9" rx="2" fill="#7aaace"/>
-  <rect x="5" y="18" width="9" height="9" rx="2" fill="#f7f8f0"/>
-  <rect x="18" y="18" width="9" height="9" rx="2" fill="#c9b59c"/>
-  <text x="16" y="21" text-anchor="middle" font-size="10" fill="#355872">W</text>
-</svg>

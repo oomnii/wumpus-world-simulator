@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wumpus World — AI Simulator</title>
+    <meta name="description" content="Classic Wumpus World laboratory: manual play and a knowledge-based AI with a visible reasoning log." />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div>
+          <h1>Wumpus World</h1>
+          <p class="sub">Intelligent Agent &amp; Environment Simulator</p>
+        </div>
+        <span id="header-badge" class="badge">AI Lab</span>
+      </header>
+
+      <main class="grid">
+        <aside class="col">
+          <section class="card">
+            <h2>Configuration</h2>
+            <label>Grid size
+              <select id="cfg-size">
+                <option value="4">4×4</option>
+                <option value="5">5×5</option>
+                <option value="6">6×6</option>
+                <option value="7">7×7</option>
+                <option value="8">8×8</option>
+                <option value="9">9×9</option>
+                <option value="10" selected>10×10</option>
+              </select>
+            </label>
+            <label>Pit density <span id="cfg-pit-label">25%</span>
+              <input id="cfg-pit" type="range" min="5" max="40" value="25" />
+            </label>
+            <label class="row"><input id="cfg-debug" type="checkbox" /> Debug reveal</label>
+            <div class="row radios">
+              <label><input type="radio" name="mode" id="mode-ai" checked /> AI Agent</label>
+              <label><input type="radio" name="mode" id="mode-manual" /> Manual</label>
+            </div>
+            <div class="btn-row">
+              <button id="btn-new" class="btn primary" type="button">New Game</button>
+              <button id="btn-reset" class="btn" type="button">Reset</button>
+            </div>
+            <p class="hint">New Game builds a random map. Reset restarts this map from the start.</p>
+            <p id="cfg-note" class="hint"></p>
+          </section>
+
+          <section class="card">
+            <h2>Controls</h2>
+            <div id="panel-manual" hidden>
+              <div class="btn-grid dir-grid">
+                <span></span>
+                <button type="button" id="act-up" class="btn primary">▲ Up</button>
+                <span></span>
+                <button type="button" id="act-left" class="btn">◀ Left</button>
+                <button type="button" id="act-down" class="btn">▼ Down</button>
+                <button type="button" id="act-right" class="btn">Right ▶</button>
+              </div>
+              <div class="btn-row">
+                <button type="button" id="act-shoot" class="btn">Shoot (S)</button>
+                <button type="button" id="act-grab" class="btn">Grab (Space)</button>
+                <button type="button" id="act-climb" class="btn">Climb (Enter)</button>
+              </div>
+              <p class="hint">Keys: ↑↓←→ move · Space grab · S shoot · Enter climb</p>
+            </div>
+            <div id="panel-ai">
+              <div class="btn-row">
+                <button type="button" id="ai-play" class="btn primary">Play</button>
+                <button type="button" id="ai-pause" class="btn">Pause</button>
+                <button type="button" id="ai-resume" class="btn">Resume</button>
+                <button type="button" id="ai-step" class="btn">Next Step</button>
+              </div>
+              <label>Speed
+                <select id="ai-speed"></select>
+              </label>
+            </div>
+          </section>
+        </aside>
+
+        <section class="col center">
+          <section class="card">
+            <h2>Environment</h2>
+            <p id="board-meta" class="hint"></p>
+            <div id="board" class="board"></div>
+          </section>
+          <section class="card">
+            <div class="head">
+              <h2>Reasoning Log</h2>
+              <button type="button" id="btn-clear-log" class="btn ghost">Clear</button>
+            </div>
+            <p id="ai-stage" class="hint">AI stage: IDLE</p>
+            <div id="log" class="log"></div>
+          </section>
+        </section>
+
+        <aside class="col">
+          <section class="card">
+            <h2>Percepts</h2>
+            <div id="percepts"></div>
+          </section>
+          <section class="card">
+            <h2>Knowledge Map</h2>
+            <div id="knowledge" class="board knowledge"></div>
+            <ul class="legend">
+              <li><span class="sw safe"></span> Safe</li>
+              <li><span class="sw vis"></span> Visited</li>
+              <li><span class="sw poss"></span> Possible</li>
+              <li><span class="sw conf"></span> Confirmed</li>
+              <li><span class="sw unk"></span> Unknown</li>
+            </ul>
+          </section>
+          <section class="card">
+            <h2>Statistics</h2>
+            <ul id="stats" class="stats"></ul>
+          </section>
+          <section class="card">
+            <div class="head">
+              <h2>History</h2>
+              <button type="button" id="btn-history" class="btn ghost">View all</button>
+            </div>
+            <div id="history"></div>
+            <button type="button" id="btn-clear-hist" class="btn danger">Clear history</button>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <dialog id="modal-result">
+      <h2 id="result-title">Game Over</h2>
+      <div id="result-body"></div>
+      <button type="button" id="result-close" class="btn primary">Close</button>
+    </dialog>
+
+    <dialog id="modal-history">
+      <h2>Game History</h2>
+      <div id="history-all"></div>
+      <button type="button" id="hist-close" class="btn">Close</button>
+    </dialog>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

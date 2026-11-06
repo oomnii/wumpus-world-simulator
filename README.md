@@ -1,280 +1,157 @@
 # Wumpus World
+
 ### Intelligent Agent & Environment Simulator
 
-Browser-based **Artificial Intelligence laboratory** project: a partially observable grid world, a rule-based agent with explicit inference, and a dashboard for manual play or step-by-step AI demonstration.
+Browser-based **Wumpus World** laboratory: a classic hidden cave, **manual** play, and a **knowledge-based AI** whose beliefs and reasons stay visible. The app is static vanilla JavaScript (ES modules). There is no build step and no runtime npm dependency.
+
+The publishable site lives in **`docs/`** so GitHub Pages can serve it as-is.
 
 ---
 
-## 1. Project Overview
+## Features
 
-You control (or observe) an agent in a cave grid containing **pits**, one **Wumpus**, and one **gold** pile. The agent learns only from **percepts** at its current cell. The goal is to **collect gold**, **return to (0,0)**, and **climb out** alive.
+- Grid sizes **4×4 … 10×10** and a pit-density slider
+- **New Game** generates a random solvable map; **Reset** restarts that same map from `(0,0)`
+- **Manual mode**: move with on-screen buttons or arrow keys; shoot, grab, climb
+- **AI mode**: Play / Pause / Resume / Next Step; speeds **250–2000 ms** (default **500 ms**)
+- Separate **environment grid** (fog of war) and **agent knowledge map**
+- Rule-based **inference** (pits and Wumpus tracked independently)
+- **BFS** on known-safe cells; gold → return home → climb
+- Scoring, statistics, reasoning log, local **game history**
+- Result popups: **Victory** (green), **Defeat** (red), **Stuck** (yellow)
+- Optional **debug reveal** (UI only — the AI never sees the hidden world)
 
-The simulator separates:
-
-- **Hidden world** — true positions of hazards and gold (world engine only).
-- **Agent knowledge** — visited cells, safe/danger beliefs, and inferred constraints (AI and manual inference map).
-
----
-
-## 2. Project Objectives
-
-- Model a classic **Wumpus World** environment (4×4 … 10×10).
-- Implement **knowledge-based** reasoning (not random movement).
-- Visualize **percepts**, **inference**, and **decisions** for teaching.
-- Support **manual** and **autonomous AI** modes on the same world.
-- Provide reproducible worlds (**seed**), scoring, and **local game history**.
+There is **no seed / RNG seed UI**. Every New Game is a fresh random map.
 
 ---
 
-## 3. Features
+## Wumpus World rules
 
-- Configurable grid size, pit density, optional seed, New Game / Reset
-- Manual controls + keyboard (arrows, Space, S, Enter)
-- AI: Play, Pause, Resume, Next Step, speed (default **500 ms** per action)
-- Environment grid with fog-of-war (`?` until visited)
-- Agent knowledge map (safe / possible / confirmed danger / visited)
-- Live percepts, statistics, reasoning log, end-of-game summary
-- Optional **debug reveal** of hidden world (UI only — not passed to AI)
-- Vitest unit tests; static production build (Vite)
+- One Wumpus, one gold, many pits; start at **(0,0)** facing **East**
+- Orthogonal neighbors only (4-direction). Percepts: **Breeze**, **Stench**, **Glitter**, **Scream**, **Bump**
+- A pit produces a breeze in the four adjacent cells; the Wumpus produces a stench the same way
+- Win: collect gold, return to start, climb out
+- Lose: step into a pit or a living Wumpus
+- Stuck: the agent has gold-climb as the only exit rule, and no remaining safe or risk move
 
 ---
 
-## 4. Technology Stack
+## How the AI decides
 
-| Layer | Choice |
-|--------|--------|
-| UI | HTML5, CSS3, ES modules |
-| Build | [Vite](https://vite.dev/) 8 |
-| Tests | [Vitest](https://vitest.dev/) 4 |
-| Runtime | Browser only (no backend, no API keys) |
-| Persistence | `localStorage` (game history) |
+The agent never reads the hidden map. It only uses its position, current percepts, and the knowledge base.
 
----
+1. **Grab** gold on glitter.
+2. **Climb** at `(0,0)` if gold is already held; otherwise walk home on a known-safe path.
+3. Step into an **adjacent known-safe unvisited** cell.
+4. **BFS** through known-safe cells to a farther safe unvisited cell.
+5. **Shoot** a confirmed Wumpus, or a small (≤2) possible-Wumpus set, from a safe square on the same row/column.
+6. If nothing safe remains, take the **lowest-risk unknown frontier** that still has a safe approach path. This can die — that is Defeat, not a bug.
+7. **Stuck** only when no safe target and no risk frontier remain.
 
-## 5. AI Concepts Demonstrated
-
-- Partially observable environment  
-- Percept → belief update → inference → action  
-- Separate **possible** vs **confirmed** hazards  
-- Single-agent planning with **BFS** over known-safe cells  
-- Risk-aware fallback when no safe frontier exists  
+Inference confirms a pit only when a breeze has a **single remaining candidate**. Two breezes sharing a cell does **not** force that cell to be a pit. A scream clears every Wumpus flag so the corpse square is enterable.
 
 ---
 
-## 6. Wumpus World Rules
-
-- Orthogonal moves only (no diagonals).
-- One Wumpus, one gold, multiple pits.
-- Start at **(0,0)**; start area is kept hazard-free adjacent to start.
-- One arrow; shooting is along a row/column until wall or Wumpus hit.
-- Win: gold collected, return to start, climb out.
-- Lose: pit or live Wumpus on entry.
-
----
-
-## 7. Percepts
-
-| Percept | Meaning |
-|---------|---------|
-| **Breeze** | Pit in an adjacent cell |
-| **Stench** | Living Wumpus adjacent |
-| **Glitter** | Gold in current cell |
-| **Scream** | Arrow killed the Wumpus |
-| **Bump** | Move blocked by grid edge |
-
----
-
-## 8. AI Agent Architecture
+## Project structure
 
 ```
-Observe percepts → Update knowledge → Infer → Decide → Execute one action
-                         ↑                    │
-                         └── PathFinder (BFS on safe cells)
+docs/                     GitHub Pages root (the whole app)
+  index.html
+  favicon.svg
+  css/style.css
+  js/                     UI + game loop (DOM)
+    main.js
+    gameController.js
+    uiController.js
+  algorithm/              Pure game / AI logic (no DOM)
+    shared.js             Constants, coordinates, shuffle
+    worldGenerator.js     Random solvable maps
+    worldEngine.js        Hidden world, actions, scoring
+    perceptEngine.js      Breeze / stench / glitter / scream / bump
+    knowledgeBase.js      Agent beliefs
+    knowledgeConsistency.js  Pit candidate checks
+    inferenceEngine.js    Logical updates
+    pathFinder.js         Safe BFS + risk frontiers + plan-shot
+    decisionEngine.js     Action choice (AIMA hybrid order)
+    decisionDiagnostics.js  Stuck / debug snapshots
+    aiAgent.js            OBSERVE → UPDATE → INFER → DECIDE → EXECUTE
+tests/
+  simulator.test.js       Node tests (imports docs/algorithm/)
+package.json              `npm test` only
+LICENSE                   MIT
+.gitignore
+README.md
 ```
 
-Modules: `KnowledgeBase`, `InferenceEngine`, `PathFinder`, `DecisionEngine`, `AIAgent`.
+**Separation:** `docs/algorithm/` never touches the DOM. `docs/js/` never decides moves. Tests import algorithm modules (and `GameController`) directly.
 
 ---
 
-## 9. Knowledge Base and Inference
+## Local setup
 
-Per cell the agent tracks visit status, pit/Wumpus safety flags, possible/confirmed hazards, and gold discovery.
+Serve **`docs/`** over HTTP. ES modules do not load from `file://`.
 
-- **No Breeze** → adjacent cells marked pit-safe (for that observation).  
-- **Breeze** → at least one adjacent pit possible; single unresolved neighbor → pit confirmed.  
-- **No Stench** → adjacent Wumpus-safe.  
-- **Stench** → intersect Wumpus candidates (single Wumpus in world).  
-- **Scream** → Wumpus dead; clear Stench reasoning.  
-- **Safe** → both pit and living-Wumpus ruled out (or survived visit).
+```powershell
+cd docs
+python -m http.server 8080
+```
 
----
+Open `http://localhost:8080/`.
 
-## 10. Pathfinding and Decision Making
-
-1. Grab gold if Glitter.  
-2. If gold held, BFS home to (0,0), then climb.  
-3. Explore adjacent **known-safe** unvisited cells.  
-4. BFS to nearest safe unvisited cell.  
-5. Lowest-risk unknown cell (logged as risk-based).  
-6. Shoot only when Wumpus is **confirmed** and aligned; else stuck if no move.
+Alternatives: VS Code Live Server with `docs/` as the root, or `npx serve docs`.
 
 ---
 
-## 11. Manual Mode vs AI Mode
+## Testing
 
-| | Manual | AI |
-|---|--------|-----|
-| Movement | You | Decision engine |
-| Inference map | Yes | Yes |
-| Reasoning log | Percepts + inference | Full cycle + stage label |
-| World on mode switch | Unchanged | Unchanged |
+Requires **Node.js 18+** (built-in test runner; no extra packages):
 
----
-
-## 12. World Configuration
-
-- **Grid:** 4×4 … 10×10 (default 10×10)  
-- **Pit density:** slider (approximate pit count)  
-- **Seed:** optional deterministic generation  
-- **Debug reveal:** show true map (demonstrations only)
-
-Worlds are checked for solvability (path to gold and back); repeated failure uses a constrained fallback generator (note shown in UI).
+```powershell
+npm test
+```
 
 ---
 
-## 13. Scoring System
+## GitHub Pages (after you review)
+
+This repo is ready to publish. Do **not** enable Pages until you have reviewed the site.
+
+1. Push the repository to GitHub (do not commit `node_modules/`).
+2. **Settings → Pages → Build and deployment**
+3. **Source:** Deploy from a branch
+4. **Branch:** `main` (or `master`)
+5. **Folder:** `/docs`
+6. Save. The site will be at:
+
+```text
+https://<YOUR_GITHUB_USERNAME>.github.io/<YOUR_REPOSITORY_NAME>/
+```
+
+No GitHub Actions workflow is included on purpose. All links in `docs/` are relative (`css/…`, `js/…`, `algorithm/…`). `docs/.nojekyll` tells Pages not to run Jekyll on the folder.
+
+---
+
+## Scoring
 
 | Event | Points |
 |-------|--------|
 | Each action | −1 |
-| Collect gold | +1000 |
-| Shoot arrow | −10 |
-| Climb out with gold | +1000 |
+| Gold | +1000 |
+| Arrow | −10 |
+| Exit with gold | +1000 |
 | Death | −1000 |
 
 ---
 
-## 14. Project Structure
+## Limitations
 
-```
-index.html
-vite.config.js
-package.json
-public/favicon.svg
-src/
-  main.js                 App bootstrap
-  engine/                 World generation, rules, percepts, scoring
-  agent/                  Knowledge, inference, BFS, decisions, AI cycle
-  controllers/            Game loop, animation timer, keyboard
-  components/             Dashboard UI renderers
-  utils/                  Constants, coordinates, seeded RNG
-  styles/                 Global, layout, components, game, responsive
-  tests/                  Vitest suites
-.github/workflows/        Optional GitHub Pages deploy
-```
+- Pit reasoning is sole-candidate / unit-propagation, not a full SAT solver. Some cells stay “possible” until more evidence.
+- Risk moves at high pit density can die. That is Defeat.
+- History stores up to **50** games in `localStorage`.
+- Very high pit density may fall back to a guaranteed-path generator (noted under Configuration).
 
 ---
 
-## 15. Installation
+## License
 
-```bash
-git clone <your-repo-url>
-cd wumpus-world
-npm install
-```
-
-Requires **Node.js 18+**.
-
----
-
-## 16. Running Locally
-
-```bash
-npm run dev
-```
-
-Open the URL printed in the terminal (typically `http://localhost:5173`).
-
----
-
-## 17. Production Build
-
-```bash
-npm run build
-npm run preview
-```
-
-Output directory: **`dist/`** (not committed; listed in `.gitignore`).
-
-For a **local root** deploy, default `base` is `/`.
-
----
-
-## 18. Testing
-
-```bash
-npm test
-```
-
-Covers world generation, percepts, inference, pathfinding, engine rules, and agent/controller behavior.
-
----
-
-## 19. GitHub Deployment
-
-This is a **static SPA** (single `index.html` entry, no client-side router).
-
-### Option A — GitHub Pages (included workflow)
-
-1. Push the repo to GitHub.  
-2. **Settings → Pages → Build and deployment → Source:** GitHub Actions.  
-3. Push to `main` (or `master`); workflow **Deploy to GitHub Pages** runs tests, builds with  
-   `VITE_BASE=/<repository-name>/`, and deploys `dist/`.  
-4. Site URL: `https://<user>.github.io/<repository-name>/`
-
-### Option B — Manual build (upload `dist/` yourself)
-
-```bash
-# Windows CMD (replace with your GitHub repo name):
-set VITE_BASE=/your-repo-name/
-npm run build
-```
-
-```powershell
-# Windows PowerShell:
-$env:VITE_BASE="/your-repo-name/"
-npm run build
-```
-
-Upload the contents of **`dist/`** only if you deploy without GitHub Actions. For the included workflow, push source code and let Actions build — do **not** commit `dist/`.
-
-No environment variables are required for local dev or a root-hosted build.
-
-**Secret audit:** No `.env`, API keys, or credentials are used by this project.
-
----
-
-## 20. Usage Instructions
-
-1. Set grid size and pit density; optional seed.  
-2. **Generate / New Game**.  
-3. **AI Agent:** **Play** (pause / resume / next step as needed).  
-4. **Manual:** switch mode; use buttons or keyboard.  
-5. Watch **Reasoning Log** and **Knowledge Map**.  
-6. Use **Help** in the header for rules and the AI cycle.  
-7. **View All** / **Clear History** for past runs (confirm before clear).
-
----
-
-## 21. Limitations and Assumptions
-
-- Pit constraints are local/heuristic, not full CSP; some pits stay “possible” until more evidence.  
-- Risk-based moves can still fail; they are labeled in the log.  
-- History keeps the latest **50** games in `localStorage`.  
-- High pit density may trigger the fallback world generator.
-
----
-
-## 22. License
-
-No license file is included in this repository. Treat as academic coursework unless you add a `LICENSE` file.
+MIT. See `LICENSE`.
