@@ -9,7 +9,7 @@ import { PathFinder } from '../docs/algorithm/pathFinder.js';
 import { DecisionEngine, planMoves } from '../docs/algorithm/decisionEngine.js';
 import { GameController } from '../docs/js/gameController.js';
 import { evaluateKbAgainstWorld, validateKnowledgeBase } from '../docs/algorithm/knowledgeConsistency.js';
-import { ACTION, FACING, STATUS, SPEEDS } from '../docs/algorithm/shared.js';
+import { ACTION, FACING, SCORE, SPEEDS, STATUS } from '../docs/algorithm/shared.js';
 
 function fixtureWorld(extra = {}) {
   return {
@@ -554,5 +554,209 @@ describe('playthrough', () => {
     const evalResult = evaluateKbAgainstWorld(g.kb, g.state);
     assert.equal(evalResult.falseConfirmedPits.length, 0);
     assert.ok([STATUS.WON, STATUS.LOST, STATUS.STUCK].includes(g.state.status));
+  });
+});
+
+describe('wumpus candidate intersection', () => {
+  const quiet = () => {};
+  const none = { breeze: false, stench: false, glitter: false, scream: false, bump: false };
+
+  it('starts with no living-Wumpus constraint', () => {
+    const kb = new KnowledgeBase(4);
+    assert.deepEqual(kb.wumpusCandidates, []);
+    assert.equal(kb.wumpusConstrained, false);
+    assert.equal(kb.wumpusInconsistent, false);
+    assert.equal(kb.wumpusDead, false);
+  });
+
+  it('narrows a valid intersection and does not keep eliminated cells', () => {
+    const kb = new KnowledgeBase(4);
+    assert.equal(kb.intersectWumpus(new Set(['1,0', '0,1'])), true);
+    assert.equal(kb.intersectWumpus(new Set(['1,0', '1,1'])), true);
+    assert.deepEqual(kb.wumpusCandidates, ['1,0']);
+    assert.equal(kb.wumpusInconsistent, false);
+  });
+
+  it('drops stale candidates when the intersection is empty', () => {
+    const kb = new KnowledgeBase(4);
+    kb.intersectWumpus(new Set(['1,0', '0,1']));
+    assert.equal(kb.intersectWumpus(new Set(['3,3', '2,3'])), false);
+    assert.deepEqual(kb.wumpusCandidates, []);
+    assert.equal(kb.wumpusInconsistent, true);
+    assert.equal(kb.intersectWumpus(new Set(['2,2'])), false);
+    assert.deepEqual(kb.wumpusCandidates, []);
+    const issues = validateKnowledgeBase(kb);
+    assert.ok(issues.some((m) => m.includes('empty')));
+  });
+
+  it('contradictory stenches do not mark unrelated cells Wumpus-safe', () => {
+    const kb = new KnowledgeBase(4);
+    const inf = new InferenceEngine();
+    inf.infer(kb, 0, 0, none, quiet, 1);
+    kb.markSafe(0, 1, '');
+    inf.infer(kb, 0, 1, { ...none, stench: true }, quiet, 2);
+    assert.equal(kb.wumpusInconsistent, false);
+    assert.ok(kb.wumpusCandidates.length > 0);
+    kb.markSafe(3, 3, '');
+    inf.infer(kb, 3, 3, { ...none, stench: true }, quiet, 3);
+    assert.equal(kb.wumpusInconsistent, true);
+    assert.deepEqual(kb.wumpusCandidates, []);
+    assert.equal(kb.get(2, 3).wumpusSafe, false);
+    assert.equal(kb.get(3, 2).wumpusSafe, false);
+    assert.equal(kb.get(2, 3).possibleWumpus, true);
+    assert.equal(kb.get(2, 3).confirmedWumpus, false);
+    for (const key of ['0,2', '1,1']) {
+      const [x, y] = key.split(',').map(Number);
+      assert.equal(kb.get(x, y).confirmedWumpus, false);
+    }
+  });
+
+  it('scream clears living Wumpus danger and is not a contradiction', () => {
+    const kb = new KnowledgeBase(4);
+    const inf = new InferenceEngine();
+    kb.intersectWumpus(new Set(['1,0']));
+    kb.intersectWumpus(new Set(['3,3']));
+    assert.equal(kb.wumpusInconsistent, true);
+    inf.infer(kb, 0, 0, { ...none, scream: true }, quiet, 4);
+    assert.equal(kb.wumpusDead, true);
+    assert.equal(kb.wumpusInconsistent, false);
+    assert.equal(kb.get(1, 0).wumpusSafe, true);
+    assert.equal(kb.get(1, 0).confirmedWumpus, false);
+    assert.equal(validateKnowledgeBase(kb).some((m) => m.includes('empty')), false);
+  });
+});
+
+describe('pit contradiction', () => {
+  it('does not mark the current cell as a pit when a breeze has no candidates', () => {
+    const kb = new KnowledgeBase(4);
+    const inf = new InferenceEngine();
+    kb.markSafe(1, 1, '');
+    for (const n of [
+      [1, 0],
+      [1, 2],
+      [0, 1],
+      [2, 1],
+    ]) {
+      kb.markPitSafe(n[0], n[1], '');
+      kb.markWumpusSafe(n[0], n[1], '');
+    }
+    inf.infer(
+      kb,
+      1,
+      1,
+      { breeze: true, stench: false, glitter: false, scream: false, bump: false },
+      () => {},
+      2,
+    );
+    assert.equal(kb.get(1, 1).confirmedPit, false);
+    assert.equal(kb.get(1, 1).visited, true);
+    const issues = validateKnowledgeBase(kb);
+    assert.ok(issues.some((m) => m.includes('breeze')));
+  });
+});
+
+describe('shooting and score', () => {
+  it('a hit screams once, kills the Wumpus, and spends the only arrow', () => {
+    const s = createWorldState(fixtureWorld({ wumpus: { x: 2, y: 0 }, gold: { x: 3, y: 3 }, pits: [] }));
+    s.agent.facing = FACING.E;
+    const eng = new WorldEngine(s);
+    const before = s.score;
+    const hit = eng.shoot();
+    assert.equal(hit.hit, true);
+    assert.equal(hit.percepts.scream, true);
+    assert.equal(s.wumpusAlive, false);
+    assert.equal(s.arrowLeft, 0);
+    assert.equal(s.score, before + SCORE.SHOOT + SCORE.ACTION);
+    const again = eng.shoot();
+    assert.equal(again.ok, false);
+    assert.equal(s.score, before + SCORE.SHOOT + SCORE.ACTION);
+  });
+
+  it('a miss does not scream or kill, and the ray is Wumpus-safe', () => {
+    const g = new GameController(() => {});
+    g.newWorld({ size: 4, pitDensity: 5 });
+    g.state.wumpus = { x: 0, y: 3 };
+    g.state.pits = [];
+    g.state.agent.facing = FACING.E;
+    const result = g.execute(ACTION.SHOOT);
+    assert.equal(result.hit, false);
+    assert.equal(g.state.wumpusAlive, true);
+    assert.equal(g.state.arrowLeft, 0);
+    assert.equal(g.engine.percepts().scream, false);
+    assert.equal(g.kb.get(1, 0).wumpusSafe, true);
+    assert.equal(g.kb.get(3, 0).wumpusSafe, true);
+    assert.equal(g.kb.get(0, 3).confirmedWumpus, false);
+  });
+});
+
+describe('ai execution control', () => {
+  it('pause and resume keep a single run, and step is one action', () => {
+    const g = new GameController(() => {});
+    g.newWorld({ size: 4, pitDensity: 5 });
+    g.startAI();
+    assert.equal(g.running, true);
+    assert.equal(g.paused, false);
+    const firstTimer = g.timer;
+    g.startAI();
+    assert.notEqual(g.timer, firstTimer);
+    g.pauseAI();
+    assert.equal(g.running, true);
+    assert.equal(g.paused, true);
+    g.resumeAI();
+    assert.equal(g.paused, false);
+    g.stopAI();
+    assert.equal(g.running, false);
+
+    const steps = g.state.steps;
+    g.stepAI();
+    assert.equal(g.running, false);
+    assert.equal(g.state.steps, steps + 1);
+    g.resetWorld();
+    assert.equal(g.running, false);
+    assert.equal(g.state.agent.x, 0);
+    assert.equal(g.state.agent.y, 0);
+    assert.equal(g.state.status, STATUS.PLAYING);
+  });
+
+  it('does not step into a confirmed living Wumpus', () => {
+    const kb = new KnowledgeBase(4);
+    kb.markSafe(0, 0, '');
+    kb.markConfirmedWumpus(1, 0, 'W');
+    kb.markConfirmedPit(0, 1, 'P');
+    const d = new DecisionEngine().decide(
+      kb,
+      {
+        agent: { x: 0, y: 0, facing: FACING.E },
+        percepts: { glitter: false, breeze: false, stench: true, scream: false, bump: false },
+        goldCollected: false,
+        arrowLeft: 1,
+        status: 'playing',
+      },
+      () => {},
+      3,
+    );
+    assert.equal(d.action, ACTION.SHOOT);
+    assert.notEqual(d.action, ACTION.MOVE_FORWARD);
+  });
+
+  it('follows the knowledge base even if that cell could hide a pit', () => {
+    const kb = new KnowledgeBase(4);
+    kb.markSafe(0, 0, '');
+    kb.markPitSafe(1, 0, '');
+    kb.markWumpusSafe(1, 0, '');
+    const d = new DecisionEngine().decide(
+      kb,
+      {
+        agent: { x: 0, y: 0, facing: FACING.E },
+        percepts: { glitter: false, breeze: false, stench: false, scream: false, bump: false },
+        goldCollected: false,
+        arrowLeft: 1,
+        status: 'playing',
+      },
+      () => {},
+      2,
+    );
+    assert.ok(d.plan && d.plan.includes(ACTION.MOVE_FORWARD));
+    assert.notEqual(d.stuck, true);
   });
 });

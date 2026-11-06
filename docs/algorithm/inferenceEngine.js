@@ -77,9 +77,19 @@ export class InferenceEngine {
       } else {
         const cand = wumpusCandidateNeighbors(kb, x, y);
         const set = new Set(cand.map((n) => cellKey(n.x, n.y)));
-        kb.intersectWumpus(set);
-        cand.forEach((n) => kb.markPossibleWumpus(n.x, n.y, `Stench at (${x},${y})`));
-        L(`[Step ${pad}] Stench — living Wumpus may be adjacent.`, 'warn');
+        const consistent = kb.intersectWumpus(set);
+        if (!consistent) {
+          for (const n of neighbors(x, y, kb.size)) {
+            kb.reopenWumpusPossibility(n.x, n.y, `Contradictory stench at (${x},${y})`);
+          }
+          L(
+            `[Step ${pad}] Stench contradicts the living-Wumpus candidate set — knowledge inconsistent.`,
+            'danger',
+          );
+        } else {
+          cand.forEach((n) => kb.markPossibleWumpus(n.x, n.y, `Stench at (${x},${y})`));
+          L(`[Step ${pad}] Stench — living Wumpus may be adjacent.`, 'warn');
+        }
       }
     }
 
@@ -118,7 +128,24 @@ export class InferenceEngine {
    * Exactly-one Wumpus: once stench localizes a candidate set, every other cell is Wumpus-safe.
    */
   resolveWumpus(kb, L, pad) {
+    if (kb.wumpusDead) return;
     kb.pruneWumpusCandidates();
+    if (kb.wumpusInconsistent) {
+      L(
+        `[Step ${pad}] KB inconsistent — refusing Wumpus-safe conclusions from the candidate set.`,
+        'danger',
+      );
+      return;
+    }
+    if (kb.wumpusConstrained && kb.stenchObserved() && !kb.wumpusCandidates.length) {
+      kb.wumpusInconsistent = true;
+      kb.wumpusCandidates = [];
+      L(
+        `[Step ${pad}] Stench remains but no living-Wumpus candidate — knowledge inconsistent.`,
+        'danger',
+      );
+      return;
+    }
     if (!kb.stenchObserved() && !kb.wumpusCandidates.length) return;
 
     if (kb.wumpusCandidates.length === 1) {

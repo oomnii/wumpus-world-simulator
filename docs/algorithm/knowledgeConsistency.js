@@ -95,6 +95,10 @@ export function auditConfirmedPits(kb) {
 export function validateKnowledgeBase(kb) {
   const issues = [];
 
+  if (kb.wumpusInconsistent) {
+    issues.push('Contradiction: living-Wumpus candidate intersection is empty.');
+  }
+
   for (let y = 0; y < kb.size; y += 1) {
     for (let x = 0; x < kb.size; x += 1) {
       const c = kb.get(x, y);

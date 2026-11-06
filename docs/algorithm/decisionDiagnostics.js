@@ -74,6 +74,8 @@ export function captureDecisionState(kb, agent, percepts, prevAgent = null) {
   }
 
   return {
+    wumpusInconsistent: Boolean(kb.wumpusInconsistent),
+    wumpusDead: Boolean(kb.wumpusDead),
     agent: { ...agent },
     previousAgent: prevAgent ? { ...prevAgent } : null,
     percepts: { ...percepts },

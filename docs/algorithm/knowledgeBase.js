@@ -22,6 +22,9 @@ export class KnowledgeBase {
     this.size = size;
     this.cells = new Map();
     this.wumpusCandidates = [];
+    this.wumpusConstrained = false;
+    this.wumpusInconsistent = false;
+    this.wumpusDead = false;
     this.goldAt = null;
     this.reset();
   }
@@ -29,6 +32,9 @@ export class KnowledgeBase {
   reset() {
     this.cells.clear();
     this.wumpusCandidates = [];
+    this.wumpusConstrained = false;
+    this.wumpusInconsistent = false;
+    this.wumpusDead = false;
     this.goldAt = null;
     for (let y = 0; y < this.size; y += 1) {
       for (let x = 0; x < this.size; x += 1) {
@@ -108,6 +114,17 @@ export class KnowledgeBase {
     c.note = note;
   }
 
+  /** Drop a candidate-set "safe" label so a contradictory Stench is not ignored. */
+  reopenWumpusPossibility(x, y, note) {
+    const c = this.get(x, y);
+    if (c.visited || c.confirmedPit) return;
+    c.confirmedWumpus = false;
+    c.possibleWumpus = true;
+    c.wumpusSafe = false;
+    c.safe = false;
+    c.note = note;
+  }
+
   markConfirmedPit(x, y, note) {
     const c = this.get(x, y);
     if (c.visited || c.confirmedWumpus) return;
@@ -131,6 +148,7 @@ export class KnowledgeBase {
     c.pitSafe = true;
     c.safe = false;
     c.note = note;
+    this.wumpusConstrained = true;
     this.wumpusCandidates = [cellKey(x, y)];
   }
 
@@ -139,15 +157,36 @@ export class KnowledgeBase {
     this.get(x, y).goldKnown = true;
   }
 
+  /**
+   * Intersect a new Stench candidate set with the current living-Wumpus set.
+   * Empty result is a contradiction: stale candidates are dropped, never kept.
+   * Returns false when the KB is (or becomes) inconsistent.
+   */
   intersectWumpus(set) {
     const list = [...set];
-    if (!this.wumpusCandidates.length) {
+    if (this.wumpusDead || this.wumpusInconsistent) {
+      this.wumpusCandidates = [];
+      this.wumpusInconsistent = true;
+      return false;
+    }
+    if (!this.wumpusConstrained) {
+      this.wumpusConstrained = true;
       this.wumpusCandidates = list;
-      return;
+      if (!list.length) {
+        this.wumpusInconsistent = true;
+        return false;
+      }
+      return true;
     }
     const prev = new Set(this.wumpusCandidates);
     const next = list.filter((k) => prev.has(k));
-    if (next.length) this.wumpusCandidates = next;
+    if (!next.length) {
+      this.wumpusCandidates = [];
+      this.wumpusInconsistent = true;
+      return false;
+    }
+    this.wumpusCandidates = next;
+    return true;
   }
 
   dropWumpusCandidate(x, y) {
@@ -172,9 +211,11 @@ export class KnowledgeBase {
     return false;
   }
 
-  /** Scream: living Wumpus is gone; the corpse square is enterable. */
+  /** Scream: living Wumpus is gone; the corpse square is enterable. Not a contradiction. */
   clearWumpus() {
     this.wumpusCandidates = [];
+    this.wumpusDead = true;
+    this.wumpusInconsistent = false;
     for (let y = 0; y < this.size; y += 1) {
       for (let x = 0; x < this.size; x += 1) {
         const c = this.get(x, y);
@@ -220,7 +261,13 @@ export class KnowledgeBase {
     this.cells.forEach((v, k) => {
       cells[k] = { ...v };
     });
-    return { size: this.size, cells, goldAt: this.goldAt };
+    return {
+      size: this.size,
+      cells,
+      goldAt: this.goldAt,
+      wumpusInconsistent: this.wumpusInconsistent,
+      wumpusDead: this.wumpusDead,
+    };
   }
 }
 

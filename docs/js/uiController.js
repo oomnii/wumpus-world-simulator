@@ -1,6 +1,25 @@
 import { ACTION, FACING_NAME, MODE } from '../algorithm/shared.js';
 
 const FACE_ICON = ['↑', '→', '↓', '←'];
+const FACE_CLASS = ['face-n', 'face-e', 'face-s', 'face-w'];
+const SPRITES = {
+  agent: 'assets/agent.png',
+  wumpus: 'assets/wumpus.png',
+  pit: 'assets/pit.png',
+  gold: 'assets/gold.png',
+  breeze: 'assets/breeze.png',
+  stench: 'assets/stench.png',
+  glitter: 'assets/glitter.png',
+};
+
+function sprite(name) {
+  const img = document.createElement('img');
+  img.className = `sprite sprite-${name}`;
+  img.src = SPRITES[name];
+  img.alt = '';
+  img.draggable = false;
+  return img;
+}
 
 export class UIController {
   constructor(game) {
@@ -159,25 +178,29 @@ export class UIController {
         const revealed = state.revealed.has(key) || config.debug;
         const agent = state.agent.x === x && state.agent.y === y;
         if (state.visited.has(key)) cell.classList.add('visited');
-        if (agent) cell.classList.add('agent');
-        if (!revealed && !agent) cell.classList.add('unexplored');
-        let html = '?';
-        if (config.debug && hidden) {
-          let icons = '';
-          if (hidden.wumpus.x === x && hidden.wumpus.y === y && state.wumpusAlive) icons += '👹';
-          if (pits.has(key)) icons += '🕳';
-          if (hidden.gold.x === x && hidden.gold.y === y && !state.goldCollected) icons += '🪙';
-          if (agent) icons = `${FACE_ICON[state.agent.facing]}${icons}`;
-          html = icons || '·';
-        } else if (!revealed && !agent) {
-          html = '?';
-        } else if (agent) {
-          html = FACE_ICON[state.agent.facing];
-          if (percepts.glitter && !state.goldCollected) html += '🪙';
-        } else {
-          html = '·';
+        if (agent) {
+          cell.classList.add('agent', FACE_CLASS[state.agent.facing]);
         }
-        cell.textContent = html;
+        if (!revealed && !agent) cell.classList.add('unexplored');
+        const belief = view.kb.cells[key] || {};
+        const icons = [];
+        if (agent) icons.push('agent');
+        if (config.debug && hidden) {
+          if (hidden.wumpus.x === x && hidden.wumpus.y === y && state.wumpusAlive) icons.push('wumpus');
+          if (pits.has(key)) icons.push('pit');
+          if (hidden.gold.x === x && hidden.gold.y === y && !state.goldCollected) icons.push('gold');
+        }
+        if ((revealed || agent) && belief.observedBreeze) icons.push('breeze');
+        if ((revealed || agent) && belief.observedStench) icons.push('stench');
+        if (agent && percepts.glitter && !state.goldCollected) icons.push('glitter');
+        if (!revealed && !agent) {
+          cell.textContent = '?';
+        } else if (icons.length) {
+          const wrap = document.createElement('span');
+          wrap.className = 'sprites';
+          icons.forEach((name) => wrap.appendChild(sprite(name)));
+          cell.appendChild(wrap);
+        }
         this.els.board.appendChild(cell);
       }
     }
